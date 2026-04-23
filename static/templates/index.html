@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>صرافي او حوالې | عبیدالله اریان</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body class="{{ 'dark-mode' if session.get('theme') == 'dark' else '' }}">
+<div id="loadingScreen" class="loading-screen"><div class="spinner"></div><p>سیستم بارېږي...</p></div>
+
+<aside class="sidebar glass">
+    <div class="sidebar-header">
+        <div class="logo"><div class="logo-icon">🏦</div><div><h2>صرافي او حوالې</h2><small>پرمختللی سیستم</small></div></div>
+        <div class="user-badge">👤 {{ full_name }}</div>
+    </div>
+    <nav class="nav">
+        <button onclick="showPage('dashboard')" class="nav-btn active" id="btn-dashboard">📊 ډشبورډ</button>
+        <button onclick="showPage('exchange')" class="nav-btn" id="btn-exchange">💱 اسعار تبادله</button>
+        <button onclick="showPage('remittance')" class="nav-btn" id="btn-remittance">✉️ حوالې</button>
+        <button onclick="showPage('principal')" class="nav-btn" id="btn-principal">🤝 وصل شوي پیسې</button>
+        <button onclick="showPage('reports')" class="nav-btn" id="btn-reports">📈 راپورونه</button>
+        <button onclick="showPage('settings')" class="nav-btn" id="btn-settings">⚙️ تنظیمات</button>
+        <button onclick="showPage('about')" class="nav-btn" id="btn-about">ℹ️ زمونږ په اړه</button>
+    </nav>
+    <div class="sidebar-footer">
+        <button onclick="toggleTheme()" class="theme-toggle-btn"><span class="emoji-icon">🌙</span> <span id="themeText">تیاره تیم</span></button>
+        <a href="/logout" class="logout-btn">🚪 وتل</a>
+    </div>
+</aside>
+
+<main class="main-content">
+    <!-- Dashboard -->
+    <section id="dashboard" class="page active-page">
+        <div class="page-header"><h2>📊 ډشبورډ – ټولیز حالت</h2><span id="currentDate" class="date-badge"></span></div>
+        <div class="cash-cards" id="cashCards"></div>
+        <div class="grid-2col">
+            <div class="card-3d"><h3>💰 د نن تبادلې</h3><div id="todayExchanges" class="scrollable-list"></div></div>
+            <div class="card-3d"><h3>✉️ د نن حوالې</h3><div id="todayRemittances" class="scrollable-list"></div></div>
+        </div>
+        <div class="card-3d"><h3>👥 د خلکو حسابونه</h3><div id="personsSummary" class="table-container"></div></div>
+    </section>
+
+    <!-- Exchange -->
+    <section id="exchange" class="page">
+        <h2>💱 د اسعارو تبادله</h2>
+        <div class="form-card card-3d">
+            <div class="exchange-row">
+                <div class="currency-box"><label>ورکړل شوې اسعار</label><select id="exGivenCurr" class="input"></select><input type="number" id="exGivenAmount" placeholder="مقدار" class="input" oninput="liveCalc()"></div>
+                <button onclick="swapCurrencies()" class="swap-btn">🔄</button>
+                <div class="currency-box"><label>ترلاسه کېدونکې اسعار</label><select id="exReceivedCurr" class="input"></select><input type="number" id="exReceivedAmount" placeholder="محاسبه شوی" class="input" readonly></div>
+            </div>
+            <div class="form-row"><label>نرخ (۱ ورکړل شوي واحد لپاره):</label><input type="number" id="exRate" placeholder="نرخ" class="input" step="any" oninput="liveCalc()"><button onclick="fetchRate()" class="btn-sm">📥 له جدوله راوړل</button></div>
+            <div class="form-row"><textarea id="exNotes" placeholder="یادښت" class="input" rows="2"></textarea></div>
+            <button onclick="saveExchange()" class="btn-primary btn-lg">✅ تبادله ثبت کړه</button>
+        </div>
+        <h3>📋 د تېرو تبادلو تاریخ</h3>
+        <div id="exchangeHistory" class="cards-grid"></div>
+    </section>
+
+    <!-- Remittances -->
+    <section id="remittance" class="page">
+        <h2>✉️ حوالې</h2>
+        <div class="form-card card-3d">
+            <div class="form-row"><input type="text" id="remSenderName" placeholder="لیږونکی نوم" class="input"><input type="text" id="remSenderId" placeholder="تذکره/پاسپورټ" class="input"><input type="text" id="remSenderPhone" placeholder="ګرځنده" class="input"></div>
+            <div class="form-row"><input type="text" id="remSenderCountry" placeholder="له کوم هیواد څخه" class="input"><input type="text" id="remReceiverName" placeholder="ترلاسه کوونکی نوم" class="input"><input type="text" id="remReceiverCountry" placeholder="ترلاسه کوونکی هیواد" class="input"></div>
+            <div class="form-row"><select id="remCurrency" class="input"></select><input type="number" id="remAmount" placeholder="مقدار" class="input"><input type="number" id="remCommissionPercent" placeholder="کمیسیون (فیصده)" class="input" step="any" value="10"><span class="inline-text">٪</span></div>
+            <div class="form-row"><textarea id="remNotes" placeholder="یادښت" class="input" rows="2"></textarea></div>
+            <button onclick="addRemittance()" class="btn-primary btn-lg">➕ حواله ثبت کړه</button>
+        </div>
+        <h3>د حوالو لېست</h3><div id="remittancesList" class="table-container"></div>
+    </section>
+
+    <!-- Principal (Connected Money) -->
+    <section id="principal" class="page">
+        <h2>🤝 وصل شوي پیسې</h2>
+        <div class="form-card card-3d">
+            <div class="form-row"><input type="text" id="principalPersonName" placeholder="د کس نوم" class="input"><input type="text" id="principalPersonId" placeholder="تذکره" class="input"></div>
+            <div class="form-row">
+                <select id="principalType" class="input">
+                    <option value="deposit">امانت ورکول (شخص ماته راکوي)</option>
+                    <option value="withdrawal">امانت اخیستل (زه ورکوم)</option>
+                    <option value="loan_given">پور ورکول (زه ورکوم)</option>
+                    <option value="loan_received">پور اخیستل (شخص راکوي)</option>
+                    <option value="settlement">وصل کول (بندول)</option>
+                </select>
+                <select id="principalCurrency" class="input"></select>
+                <input type="number" id="principalAmount" placeholder="مقدار" class="input">
+            </div>
+            <div class="form-row"><textarea id="principalNotes" placeholder="یادښت" class="input" rows="2"></textarea></div>
+            <button onclick="savePrincipalTransaction()" class="btn-primary btn-lg">💾 ثبت کړه</button>
+        </div>
+        <h3>👥 د کسانو حسابونه</h3>
+        <div id="personsBalancesTable" class="table-container"></div>
+        <h3>📜 د معاملو تاریخ (اصول)</h3>
+        <div id="principalHistory" class="cards-grid"></div>
+    </section>
+
+    <!-- Reports -->
+    <section id="reports" class="page">
+        <h2>📈 راپورونه</h2>
+        <div class="report-actions"><button onclick="refreshReport()" class="btn-secondary">تازه کول</button><button onclick="printReport()" class="btn-primary">🖨️ پرینټ</button></div>
+        <div class="report-cards" id="currencyReportCards"></div>
+        <div class="card-3d"><h3>👥 د خلکو خالص حسابونه</h3><div id="personsNetTable" class="table-container"></div></div>
+        <div class="card-3d chart-small"><h3>📊 د صندوق موجودي</h3><canvas id="reportChart" height="120"></canvas></div>
+    </section>
+
+    <!-- Settings -->
+    <section id="settings" class="page">
+        <h2>⚙️ تنظیمات</h2>
+        <div class="settings-card card-3d">
+            <h3>د اسعارو نرخونه</h3>
+            <div id="ratesPanel" class="table-container"></div>
+            <div class="add-currency-form" style="margin-top:15px;">
+                <input type="text" id="newCurrencyCode" placeholder="نوی اسعار (لکه EUR)" class="input" style="width:150px;">
+                <button onclick="addNewCurrency()" class="btn-primary">➕ نوی اسعار</button>
+            </div>
+            <button onclick="saveRates()" class="btn-primary" style="margin-top:10px;">نرخونه خوندي کړه</button>
+        </div>
+        <div class="settings-card card-3d">
+            <h3>🗑️ د اسعارو ړنګول</h3>
+            <div id="currenciesList" class="table-container"></div>
+            <p class="small-note">پاملرنه: یوازې هغه اسعار ړنګېدلی شي چې له هغې سره هیڅ معامله نه وي شوې.</p>
+        </div>
+        <div class="settings-card card-3d">
+            <h3>د کارن بدلون</h3>
+            <input type="text" id="newUsername" placeholder="نوی کارن نوم" class="input">
+            <input type="password" id="currentPass" placeholder="اوسنی پاسورډ" class="input">
+            <input type="password" id="newPassword" placeholder="نوی پاسورډ" class="input">
+            <button onclick="changeCred()" class="btn-primary">تازه کول</button>
+        </div>
+        <div class="settings-card card-3d">
+            <h3>بیک اپ</h3>
+            <button onclick="backupDatabase()" class="btn-secondary">💾 د ډېټابېس بیک اپ</button>
+            <span id="backupMsg"></span>
+        </div>
+    </section>
+
+    <!-- About -->
+    <section id="about" class="page">
+        <div class="about-card card-3d"><div class="about-header"><span class="about-logo">🏦</span><h1>صرافي او حوالې مدیریت</h1></div><p class="version">نسخه ۷.۰ – ۲۰۲۶</p><hr><div class="about-details"><h3>👨‍💻 جوړونکی</h3><p><strong>نوم:</strong> عبیدالله اریان</p><p><strong>آدرس:</strong> افغانستان - پکتیا</p><p><strong>اړیکه:</strong> +۹۳۷۷۹۰۶۲۱۵۵</p><p><strong>ایمیل:</strong> Obaidaryan155@gmail.com</p></div><p class="copyright">© ۲۰۲۶ – عبیدالله اریان | ټول حقونه خوندي دي</p></div>
+    </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
