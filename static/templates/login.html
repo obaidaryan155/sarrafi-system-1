@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>ننوتل – صرافي او حوالې</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family: 'Vazirmatn', sans-serif; }
+        body {
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            animation: bgColorShift 12s infinite alternate; overflow: hidden;
+        }
+        @keyframes bgColorShift {
+            0%{background:#0f0c29} 10%{background:#302b63} 20%{background:#24243e} 30%{background:#0f2027}
+            40%{background:#203a43} 50%{background:#2c5364} 60%{background:#1a2a6c} 70%{background:#b21f1f}
+            80%{background:#fdbb2d} 90%{background:#2b5876} 100%{background:#4e4376}
+        }
+        .dollar-rain { position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0; }
+        .dollar-rain span {
+            position:absolute; display:block; font-size:24px; color:rgba(255,215,0,0.5);
+            animation: fall linear infinite; bottom:-50px;
+        }
+        .dollar-rain span:nth-child(1){left:5%; animation-duration:22s}
+        .dollar-rain span:nth-child(2){left:15%; animation-duration:18s; animation-delay:2s}
+        .dollar-rain span:nth-child(3){left:25%; animation-duration:25s; animation-delay:1s}
+        .dollar-rain span:nth-child(4){left:35%; animation-duration:16s; animation-delay:5s}
+        .dollar-rain span:nth-child(5){left:45%; animation-duration:20s}
+        .dollar-rain span:nth-child(6){left:55%; animation-duration:28s; animation-delay:6s}
+        .dollar-rain span:nth-child(7){left:65%; animation-duration:14s; animation-delay:3s}
+        .dollar-rain span:nth-child(8){left:75%; animation-duration:23s; animation-delay:7s}
+        .dollar-rain span:nth-child(9){left:85%; animation-duration:19s; animation-delay:4s}
+        .dollar-rain span:nth-child(10){left:95%; animation-duration:21s}
+        @keyframes fall {
+            0%{transform:translateY(0) rotate(0deg); opacity:0.3}
+            50%{opacity:0.8}
+            100%{transform:translateY(100vh) rotate(360deg); opacity:0.3}
+        }
+        .login-card {
+            position:relative; z-index:10; background:rgba(255,255,255,0.12); backdrop-filter:blur(20px);
+            border-radius:48px; padding:45px 35px; width:420px; text-align:center; color:white;
+            border:1px solid rgba(255,255,255,0.25); box-shadow:0 30px 50px rgba(0,0,0,0.6), 0 0 40px rgba(245,158,11,0.3);
+            transform: perspective(800px) rotateX(3deg); transition:0.3s;
+        }
+        .login-card:hover { transform:perspective(800px) rotateX(0deg) translateY(-5px); box-shadow:0 35px 60px rgba(0,0,0,0.7), 0 0 60px rgba(245,158,11,0.5); }
+        .logo { font-size:70px; margin-bottom:10px; filter: drop-shadow(0 0 15px gold); }
+        h1 { margin-bottom:5px; font-weight:900; color:#fbbf24; text-shadow:0 2px 10px rgba(0,0,0,0.5); }
+        .subtitle { color:#fde68a; margin-bottom:25px; }
+        .input-group { margin-bottom:18px; text-align:right; }
+        label { display:block; margin-bottom:6px; color:#fcd34d; font-weight:600; }
+        input { width:100%; padding:14px 18px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); border-radius:60px; color:#fff; font-size:16px; outline:none; transition:0.3s; }
+        input:focus { border-color:#f59e0b; background:rgba(255,255,255,0.25); box-shadow:0 0 20px rgba(245,158,11,0.4); }
+        .login-btn { width:100%; padding:14px; background:linear-gradient(135deg, #f59e0b, #b45309); border:none; border-radius:60px; color:#fff; font-weight:900; font-size:18px; cursor:pointer; margin-top:12px; box-shadow:0 8px 20px rgba(245,158,11,0.4); transition:0.3s; }
+        .login-btn:hover { transform:translateY(-3px); box-shadow:0 12px 30px rgba(245,158,11,0.7); }
+        .error { background:#dc2626; color:#fff; padding:10px; border-radius:40px; margin-bottom:18px; display:none; }
+        .footer-text { margin-top:25px; color:#fbbf24; font-size:12px; opacity:0.8; }
+    </style>
+</head>
+<body>
+<div class="dollar-rain">
+    <span>💵</span><span>💵</span><span>💵</span><span>💵</span><span>💵</span>
+    <span>💵</span><span>💵</span><span>💵</span><span>💵</span><span>💵</span>
+</div>
+<div class="login-card">
+    <div class="logo">🏦</div>
+    <h1>صرافي او حوالې</h1>
+    <p class="subtitle">پرمختللی سیستم</p>
+    <div id="loginError" class="error"></div>
+    <div class="input-group"><label>کارن نوم</label><input type="text" id="username" value="admin"></div>
+    <div class="input-group"><label>پاسورډ</label><input type="password" id="password" value="admin123"></div>
+    <button onclick="login()" class="login-btn">🚪 ننوتل</button>
+    <p class="footer-text">© ۲۰۲۶ عبیدالله اریان</p>
+</div>
+<script>
+    async function login() {
+        const u = document.getElementById('username').value.trim();
+        const p = document.getElementById('password').value;
+        if(!u||!p) return showError('ډک کړئ');
+        const res = await fetch('/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p})});
+        const data = await res.json();
+        if(data.success) window.location.href = '/';
+        else showError(data.message);
+    }
+    function showError(m){ const e=document.getElementById('loginError'); e.textContent=m; e.style.display='block'; setTimeout(()=>e.style.display='none',4000); }
+    document.addEventListener('keypress', e => { if(e.key==='Enter') login(); });
+</script>
+</body>
+</html>
